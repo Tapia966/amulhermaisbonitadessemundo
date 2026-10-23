@@ -1,0 +1,849 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<style>
+  :root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+  img { max-width: 100%; }
+  [hidden] { display: none !important; }
+</style>
+<title>Rafa e Sammi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gloock&family=Hanken+Grotesk:wght@400;500;600;700&family=Caveat:wght@600;700&family=Dancing+Script:wght@600;700&display=swap">
+<style>
+/* Layout: uma tela cheia por vez, como stories. Abre trancada com cadeado (senha 24),
+   segue capítulo a capítulo com barra de progresso, faz a conta do 24, e termina com a
+   pergunta digitada letra por letra e o "Agora olha pra mim". Visual escuro único:
+   vinho, vermelho e prata. */
+:root {
+  --bg: #12060a;
+  --bg-2: #1e0a11;
+  --surface: #26101a;
+  --fg: #fbf1f3;
+  --muted: #c4a7af;
+  --red: #f0405a;
+  --red-deep: #a3122a;
+  --silver: #dde1e8;
+  --line: #3f222c;
+  --font-display: "Gloock", Georgia, "Times New Roman", serif;
+  --font-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-hand: "Caveat", "Segoe Script", cursive;
+  --font-love: "Dancing Script", "Segoe Script", cursive;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+html { background: var(--bg); }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font-family: var(--font-body); font-size: 1.0625rem; line-height: 1.6;
+  overflow: hidden;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; margin: 0; line-height: 1.05; text-wrap: balance; }
+p { margin: 0; }
+button { font: inherit; }
+:where(button, input):focus-visible { outline: 3px solid var(--silver); outline-offset: 3px; }
+
+#stars { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0; }
+.glow {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(50rem 28rem at 85% -10%, rgba(240,64,90,.26), transparent 60%),
+    radial-gradient(40rem 24rem at -10% 110%, rgba(221,225,232,.08), transparent 60%);
+}
+
+/* cadeado */
+.lock {
+  position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(24px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+  transition: opacity .8s ease, transform .8s ease;
+}
+.lock.gone { opacity: 0; transform: scale(1.06); pointer-events: none; }
+.lock-card { width: 100%; max-width: 26rem; display: flex; flex-direction: column; align-items: center; gap: 1.2rem; text-align: center; }
+.lock svg { width: 92px; height: 112px; overflow: visible; }
+.lock .shackle { transition: transform .6s cubic-bezier(.3,1.6,.5,1); transform-origin: 70% 100%; }
+.lock.open .shackle { transform: translateY(-14px) rotate(18deg); }
+.lock h1 { font-size: clamp(2.2rem, 10vw, 3.2rem); }
+.lock .sub { color: var(--muted); }
+.lock form { display: flex; gap: .6rem; width: 100%; max-width: 18rem; }
+.lock input {
+  flex: 1; min-width: 0; text-align: center; font-family: var(--font-display); font-size: 2rem; letter-spacing: .12em;
+  color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: .5rem .6rem;
+}
+.lock input::placeholder { color: var(--line); }
+.lock .go {
+  border: 0; border-radius: 14px; padding: 0 1.2rem; font-weight: 700; color: #fff; cursor: pointer;
+  background: linear-gradient(180deg, var(--red), var(--red-deep));
+}
+.lock .hint { color: var(--silver); min-height: 1.6em; font-size: .98rem; }
+.shake { animation: shake .45s; }
+@keyframes shake { 20%,60% { transform: translateX(-9px); } 40%,80% { transform: translateX(9px); } }
+
+/* stories */
+.app {
+  position: fixed; inset: 0; z-index: 2; display: flex; flex-direction: column;
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  opacity: 0; transition: opacity .9s ease .3s;
+}
+.app.live { opacity: 1; }
+.bars { display: flex; gap: 5px; width: 100%; max-width: 40rem; margin-inline: auto; transition: opacity .5s; }
+.bars i { flex: 1; height: 3px; border-radius: 3px; background: var(--line); overflow: hidden; position: relative; }
+.bars i::after { content: ""; position: absolute; inset: 0; background: var(--silver); transform: scaleX(0); transform-origin: left; transition: transform .5s ease; }
+.bars i.done::after { transform: scaleX(1); }
+.app.quiet .bars, .app.quiet .nav { opacity: 0; pointer-events: none; }
+.stage { position: relative; flex: 1; min-height: 0; }
+.slide {
+  position: absolute; inset: 0; overflow-y: auto; display: flex; flex-direction: column;
+  opacity: 0; visibility: hidden; transform: translateX(24px);
+  transition: opacity .55s ease, transform .55s ease, visibility 0s linear .55s;
+}
+.slide.active { opacity: 1; visibility: visible; transform: none; transition: opacity .55s ease, transform .55s ease, visibility 0s; }
+.slide.past { transform: translateX(-24px); }
+.inner { width: 100%; max-width: 40rem; margin: auto; padding-block: 1.5rem; display: flex; flex-direction: column; gap: 1.2rem; }
+.nav { display: flex; justify-content: space-between; gap: .8rem; width: 100%; max-width: 40rem; margin-inline: auto; transition: opacity .5s; }
+.nav button { border-radius: 999px; padding: .8rem 1.5rem; cursor: pointer; font-weight: 600; }
+.back { background: transparent; color: var(--muted); border: 1px solid var(--line); }
+.next { background: var(--fg); color: var(--bg); border: 0; margin-left: auto; }
+.back[disabled] { visibility: hidden; }
+
+/* abertura */
+.for { color: var(--muted); }
+.hero-title { font-size: clamp(3.4rem, 16vw, 7.5rem); letter-spacing: -0.02em; line-height: .92; }
+.hero-title .amp {
+  display: block; font-size: .55em; line-height: 1.1;
+  background: linear-gradient(100deg, var(--red) 0%, var(--silver) 45%, var(--red) 70%);
+  background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.slide.active .hero-title .amp { animation: sheen 3.2s ease-out .3s 1 both; }
+@keyframes sheen { from { background-position: 100% 0; } to { background-position: 0 0; } }
+.lead { font-size: 1.2rem; max-width: 32rem; }
+.cap { color: var(--muted); }
+.units { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .5rem; }
+.unit { display: flex; flex-direction: column; gap: .1rem; padding: .8rem .8rem .6rem; border: 1px solid var(--line); border-radius: 14px; background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,0)); min-width: 0; }
+.unit b { font-family: var(--font-display); font-weight: 400; font-size: clamp(1.7rem, 8vw, 3rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.unit:first-child b { color: var(--red); }
+.unit span { color: var(--muted); font-size: .82rem; }
+.since { color: var(--muted); font-size: .92rem; }
+
+/* capítulos */
+.date { font-family: var(--font-display); font-size: clamp(4.5rem, 22vw, 8rem); line-height: .85; color: transparent; -webkit-text-stroke: 1.2px var(--red); font-variant-numeric: tabular-nums; }
+.tag { color: var(--silver); font-size: .95rem; }
+.chap h2 { font-size: clamp(2rem, 8vw, 3rem); }
+.chap p.txt { font-size: 1.15rem; max-width: 34rem; }
+.chap q { quotes: "“" "”"; font-style: italic; }
+.slide.active .date { animation: draw 1.4s ease-out both; }
+@keyframes draw { from { opacity: 0; letter-spacing: .12em; } to { opacity: 1; letter-spacing: 0; } }
+
+/* a conta */
+.math h2 { font-size: clamp(2rem, 8vw, 3rem); }
+.words { display: grid; grid-template-columns: 1fr; gap: .7rem 2rem; }
+@media (min-width: 640px) { .words { grid-template-columns: 1fr 1fr; } }
+.word { display: flex; flex-direction: column; gap: .3rem; min-width: 0; }
+.word .name { font-family: var(--font-display); color: var(--muted); }
+.tiles { display: flex; gap: 5px; }
+.tile { flex: 0 0 auto; width: clamp(2.3rem, 10.5vw, 3rem); aspect-ratio: 1 / 1.12; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .1rem; background: var(--surface); color: var(--muted); border-radius: 8px; transition: background .18s, color .18s, transform .18s, box-shadow .18s; }
+.tile b { font-family: var(--font-display); font-weight: 400; font-size: 1.3rem; line-height: 1; }
+.tile i { font-style: normal; font-size: .66rem; line-height: 1; font-variant-numeric: tabular-nums; opacity: .85; }
+.tile.on { background: var(--red); color: #fff; }
+.tile.now { transform: translateY(-5px); box-shadow: 0 8px 24px rgba(240,64,90,.45); }
+.total { display: flex; align-items: baseline; flex-wrap: wrap; gap: .4rem 1.2rem; }
+.big { font-family: var(--font-display); font-size: clamp(5rem, 24vw, 9rem); line-height: .9; color: var(--red); font-variant-numeric: tabular-nums; min-width: 2ch; text-shadow: 0 0 40px rgba(240,64,90,.35); }
+.sum { color: var(--muted); }
+.again { align-self: flex-start; color: var(--silver); background: transparent; border: 1px solid var(--line); border-radius: 999px; padding: .4rem 1rem; cursor: pointer; font-size: .92rem; }
+
+.six { align-items: flex-start; }
+.six .eqline { font-family: var(--font-display); font-size: clamp(3rem, 14vw, 6rem); line-height: 1; }
+.six .eqline em { font-style: normal; color: var(--red); display: inline-block; }
+.slide.active .six .eqline em { animation: pop 1.2s cubic-bezier(.2,1.6,.4,1) .4s both; }
+@keyframes pop { from { transform: scale(.2); opacity: 0; } to { transform: none; opacity: 1; } }
+.six p { font-size: 1.15rem; max-width: 34rem; }
+.coinc { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; padding: 0; margin: 0; }
+.coinc li { border: 1px solid var(--line); border-radius: 999px; padding: .3rem .9rem; }
+.coinc li span { color: var(--silver); font-variant-numeric: tabular-nums; }
+
+/* a virada */
+.turn .inner { align-items: center; text-align: center; gap: 2.2rem; }
+.typed { font-family: var(--font-love); font-weight: 700; font-size: clamp(2.8rem, 13vw, 5.6rem); line-height: 1.1; min-height: 2.3em; max-width: 12ch; opacity: 0; transition: opacity .6s; }
+.typed.on { opacity: 1; }
+.typed .caret { display: inline-block; width: .06em; height: .9em; background: var(--red); margin-left: .05em; vertical-align: -.08em; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.look { font-family: var(--font-display); font-size: clamp(2.6rem, 12vw, 5.4rem); color: var(--red); opacity: 0; transform: scale(.92); transition: opacity 1.4s ease, transform 1.4s ease; text-shadow: 0 0 50px rgba(240,64,90,.5); }
+.look.show { opacity: 1; transform: none; animation: breathe 3s ease-in-out 1.4s infinite; }
+@keyframes breathe { 50% { transform: scale(1.04); text-shadow: 0 0 80px rgba(240,64,90,.7); } }
+.cont { opacity: 0; pointer-events: none; transition: opacity 1s; background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: .6rem 1.3rem; cursor: pointer; }
+.cont.show { opacity: 1; pointer-events: auto; }
+
+/* resposta */
+.answer .inner { align-items: center; text-align: center; gap: 1.5rem; }
+.answer h2 { font-family: var(--font-love); font-weight: 700; font-size: clamp(2.6rem, 11vw, 4.6rem); line-height: 1.1; max-width: 14ch; }
+.color { color: var(--muted); max-width: 28rem; }
+.choices { display: flex; flex-wrap: wrap; justify-content: center; gap: .8rem; }
+.choice { font-weight: 700; font-size: 1.1rem; color: #fff; background: linear-gradient(180deg, var(--red), var(--red-deep)); border: 0; border-radius: 999px; padding: 1rem 1.8rem; cursor: pointer; box-shadow: 0 10px 30px rgba(240,64,90,.35); animation: pulse 2.4s ease-in-out infinite; }
+.choice:nth-child(2) { animation-delay: .3s; } .choice:nth-child(3) { animation-delay: .6s; }
+@keyframes pulse { 50% { transform: scale(1.05); } }
+.sign { font-family: var(--font-hand); font-size: 2.6rem; line-height: 1; color: var(--silver); }
+.stack { display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
+.done { display: flex; flex-direction: column; align-items: center; gap: 1rem; width: 100%; }
+#heart { width: 100%; max-width: 480px; height: 300px; display: block; }
+.done h3 { font-size: clamp(2.8rem, 12vw, 5rem); }
+.done .ritual { font-family: var(--font-display); font-size: clamp(1.5rem, 6vw, 2.1rem); line-height: 1.3; }
+.done .ritual span { display: block; color: var(--red); }
+.reveal { opacity: 0; transform: translateY(14px); animation: rise .9s cubic-bezier(.2,.7,.2,1) forwards; }
+.d1 { animation-delay: 2.6s; } .d2 { animation-delay: 3.2s; } .d3 { animation-delay: 3.8s; } .d4 { animation-delay: 4.4s; } .d5 { animation-delay: 5s; }
+@keyframes rise { to { opacity: 1; transform: none; } }
+.pix { display: block; width: 100%; max-width: 300px; aspect-ratio: 48 / 36; image-rendering: pixelated; image-rendering: crisp-edges; }
+.turn .pix { max-width: 340px; }
+.pix-uno { aspect-ratio: 192 / 108; max-width: 460px; border-radius: 10px; }
+.heartwrap { position: relative; width: 100%; max-width: 480px; }
+#pix-done { position: absolute; left: 50%; bottom: -6px; width: 150px; transform: translateX(-50%); opacity: 0; animation: fadein 1.2s ease 1.6s forwards; }
+@keyframes fadein { to { opacity: 1; } }
+#confetti { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+
+@media (max-height: 700px) {
+  .tile { width: clamp(2.1rem, 9.5vw, 2.6rem); }
+  .big { font-size: clamp(4rem, 18vw, 6rem); }
+  #heart { height: 230px; }
+}
+</style>
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+<div class="glow" aria-hidden="true"></div>
+
+<!-- cadeado -->
+<div class="lock" id="lock">
+  <div class="lock-card">
+    <svg viewBox="0 0 92 112" aria-hidden="true">
+      <path class="shackle" d="M22 50 V32 a24 24 0 0 1 48 0 V50" fill="none" stroke="var(--silver)" stroke-width="8" stroke-linecap="round"/>
+      <rect x="8" y="48" width="76" height="60" rx="14" fill="var(--red)"/>
+      <path d="M46 70 c-4-6-14-4-14 3 c0 7 14 14 14 14 s14-7 14-14 c0-7-10-9-14-3z" fill="var(--fg)"/>
+    </svg>
+    <h1>Para o meu amor</h1>
+    <p class="sub">Essa história está trancada. Só abre com a data em que tudo começou.</p>
+    <form id="lock-form" autocomplete="off">
+      <input id="lock-input" type="text" inputmode="numeric" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Senha">
+      <button class="go" type="submit">Abrir</button>
+    </form>
+    <p class="hint" id="hint" aria-live="polite"></p>
+  </div>
+</div>
+
+<!-- stories -->
+<div class="app" id="app" aria-hidden="true">
+  <div class="bars" id="bars"></div>
+  <div class="stage" id="stage">
+
+    <section class="slide" data-i="0">
+      <div class="inner">
+        <p class="for">Para o meu amor</p>
+        <h1 class="hero-title">Rafa<span class="amp">&amp; Sammi</span></h1>
+        <p class="lead">Uma história que nasceu numa sexta-feira, com uma simples mensagem… e que eu quero continuar escrevendo ao seu lado.</p>
+        <canvas class="pix" id="pix-hero" width="96" height="72" aria-label="Rafa e Sammi em pixel art"></canvas>
+        <p class="cap">Desde a nossa primeira mensagem, já se passaram</p>
+        <div class="units">
+          <div class="unit"><b id="c-d">0</b><span>dias</span></div>
+          <div class="unit"><b id="c-h">00</b><span>horas</span></div>
+          <div class="unit"><b id="c-m">00</b><span>minutos</span></div>
+          <div class="unit"><b id="c-s">00</b><span>segundos</span></div>
+        </div>
+        <p class="since">Contando a partir de 7 de agosto de 2026, às 21h11.</p>
+      </div>
+    </section>
+
+    <section class="slide chap" data-i="1">
+      <div class="inner">
+        <div class="date">07.08</div>
+        <p class="tag">a mensagem</p>
+        <h2>Uma sexta-feira</h2>
+        <p class="txt">Match! Recebi a notificação de que dei match com uma mulher simplesmente maravilhosamente linda! Toda pilchada, com uma bio descontraída, e ainda curtia BANDINHAS!? Logo pensei: é o amor da minha vida, lógico!</p>
+      </div>
+    </section>
+
+    <section class="slide chap" data-i="2">
+      <div class="inner">
+        <div class="date">11.08</div>
+        <p class="tag">seu aniversário</p>
+        <h2>Chorando na mesa de sinuca</h2>
+        <p class="txt">Era meia-noite e um minuto e eu já tinha articulado um texto bem fofinho para te mandar! Pensei com carinho em cada detalhe de cada palavra e frase que estava escrevendo, e mandei! Sua reação foi maior do que eu esperava, e fiquei de coração suuuuper quentinho naquela madrugada. Descobrir que você chorou e gargalhou esquentou ainda mais o meu coração!</p>
+      </div>
+    </section>
+
+    <section class="slide chap" data-i="3">
+      <div class="inner">
+        <div class="date">14.08</div>
+        <p class="tag">o primeiro encontro</p>
+        <h2>Batata salgada</h2>
+        <p class="txt">Eram 18h50 daquele início de noite levemente chuvoso. Mandei um “Acho que cheguei” e fiquei aguardando ansiosamente, com um puta frio na barriga, você chegar. Confesso que nem vi você; só quando olhei pelo retrovisor do carro, lá estava você: linda, com casaco de couro, cachecol, segurando meu presentinho, com um sorriso estampado no rosto! Naquela hora caiu a ficha do quanto você era linda!</p>
+      </div>
+    </section>
+
+    <section class="slide chap" data-i="4">
+      <div class="inner">
+        <div class="date">15.08</div>
+        <p class="tag">a dor</p>
+        <h2>A solução</h2>
+        <p class="txt">Naquela madrugada, você e suas amigas cantando no karaokê, enquanto eu sofria com dor no estômago. Me queixei pra você e, do nada, você me aparece com a solução (remédio) e uma Coca-Cola pequena para tomar. Aquilo foi, e continua sendo, um dos maiores gestos de amor que você me ofereceu.</p>
+      </div>
+    </section>
+
+    <section class="slide chap" data-i="5">
+      <div class="inner">
+        <div class="date">17.08</div>
+        <p class="tag">a surpresa</p>
+        <h2>Tu mora num puta morro, hein!?</h2>
+        <canvas class="pix pix-uno" id="pix-uno" width="192" height="108" aria-label="Um Fiat Uno azul subindo um morro até a minha casa"></canvas>
+        <p class="txt">Aguardava ansiosamente a minha “entrega”, que você disse ter enviado. Estava deitado (quase dormindo, pois ia cochilar) quando vejo um Uno azul, placa inicial ANA, chegando na minha rua. Foi uma surpresa que eu JAMAIS imaginaria! Foi extremamente gratificante ter você na minha casa e, logo de cara, apresentar você para os meus pais e para o meu filho.</p>
+      </div>
+    </section>
+
+    <section class="slide chap" data-i="6">
+      <div class="inner">
+        <div class="date">19.08</div>
+        <p class="tag">o te amo</p>
+        <h2>Escapou</h2>
+        <p class="txt">O primeiro “eu te amo” escapou em um áudio de 33 segundos, que me estampou um sorriso fixo por vários minutos, aliás, pelo dia inteiro! Logo depois me soltei também e retribuí o gesto lindo!</p>
+      </div>
+    </section>
+
+    <section class="slide chap" data-i="7">
+      <div class="inner">
+        <div class="date">Hoje</div>
+        <p class="tag">desde então</p>
+        <h2>Os nossos dias</h2>
+        <p class="txt">Ovinho de manhã, café fresco, torradinha com mel, iogurte grego, molhos gorgonza, rolês, uma hora de estrada só para nos vermos, roupinhas combinando, looks novos aprovados por você, nossos “bom dia” diferentes, tudo exatamente perfeito como nós somos.</p>
+      </div>
+    </section>
+
+    <section class="slide math" data-i="8">
+      <div class="inner">
+        <h2>Por que o dia 24</h2>
+        <p>Você perguntou qual era a lógica da data, tentou vários chutes, mas não acertou... Praticamente todo dia a gente se despede do mesmo jeito: eu mando <strong>Smacks, Smacks</strong> e você responde <strong>Kisses, Kisses</strong>. Conte as letras.</p>
+        <div class="words" id="words" role="group" aria-label="As letras de Smacks, Smacks, Kisses, Kisses"></div>
+        <div class="total">
+          <div class="big" id="counter" aria-live="polite">24</div>
+          <p class="sum">12 letras minhas + 12 letras suas</p>
+        </div>
+        <button class="again" id="again" type="button">Contar de novo</button>
+      </div>
+    </section>
+
+    <section class="slide" data-i="9">
+      <div class="inner six">
+        <p class="eqline">2 + 4 = <em>6</em></p>
+        <p>No espiritual, o 6 é o número da harmonia. É a energia do amor, do lar e da família, de quem cuida e é cuidado.</p>
+        <ul class="coinc">
+          <li>Smacks <span>6</span></li>
+          <li>Kisses <span>6</span></li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="slide turn" data-i="10">
+      <div class="inner">
+        <p class="look" id="look">Agora olha pra mim.</p>
+        <canvas class="pix" id="pix-turn" width="96" height="72" aria-hidden="true"></canvas>
+        <h2 class="typed" id="typed" aria-label="Quer namorar comigo?"></h2>
+        <button class="cont" id="cont" type="button">Responder</button>
+      </div>
+    </section>
+
+    <section class="slide answer" data-i="11">
+      <div class="inner">
+        <div id="ask-form" class="stack">
+          <h2>Sammi, você aceita namorar comigo?</h2>
+          <p class="color">Você perguntou de que cor seria este dia. É vermelho, com o brilho da prata.</p>
+          <div class="choices">
+            <button class="choice" type="button">Sim</button>
+            <button class="choice" type="button">Claro que sim, benhê</button>
+            <button class="choice" type="button">Já era hora</button>
+          </div>
+          <p class="sign">Rafa &amp; Sammi</p>
+        </div>
+        <div id="ask-done" class="done" hidden>
+          <div class="heartwrap">
+            <canvas id="heart" aria-hidden="true"></canvas>
+            <canvas class="pix" id="pix-done" width="96" height="72" aria-hidden="true"></canvas>
+          </div>
+          <h3 class="reveal d1">Agora é oficial.</h3>
+          <p class="reveal d2">Rafa e Sammi, namorados. Pode pedir a taça de vinho!</p>
+          <p class="reveal d3">Juntos há <strong id="done-days">0</strong> dias, e contando.</p>
+          <p class="ritual reveal d4">Smacks, Smacks<span>Kisses, Kisses</span></p>
+          <p class="sign reveal d5">Te amo!</p>
+        </div>
+      </div>
+    </section>
+
+  </div>
+  <div class="nav" id="nav">
+    <button class="back" id="back" type="button">Voltar</button>
+    <button class="next" id="next" type="button">Próximo</button>
+  </div>
+</div>
+
+<canvas id="confetti" aria-hidden="true"></canvas>
+
+<script>
+(function () {
+  var PASS = ["0708", "78", "07082026", "782026", "070826"];
+  var STORY_LAST = 9; /* slides com barra de progresso: 0 a 9 */
+
+  /* contador desde a primeira mensagem: 07/08/2026 21:11 (horário de Brasília) */
+  var start = new Date("2026-08-07T21:11:00-03:00").getTime();
+  function pad(v) { return (v < 10 ? "0" : "") + v; }
+  function tickClock() {
+    var s = Math.floor(Math.max(0, Date.now() - start) / 1000);
+    var d = Math.floor(s / 86400); s -= d * 86400;
+    var h = Math.floor(s / 3600); s -= h * 3600;
+    var m = Math.floor(s / 60); s -= m * 60;
+    document.getElementById("c-d").textContent = String(d);
+    document.getElementById("c-h").textContent = pad(h);
+    document.getElementById("c-m").textContent = pad(m);
+    document.getElementById("c-s").textContent = pad(s);
+    document.getElementById("done-days").textContent = String(d);
+  }
+  tickClock(); setInterval(tickClock, 1000);
+
+  /* estrelas */
+  var sc = document.getElementById("stars"), sx = sc.getContext("2d"), stars = [];
+  function sizeStars() {
+    sc.width = window.innerWidth; sc.height = window.innerHeight; stars = [];
+    var n = Math.round(sc.width * sc.height / 9000);
+    for (var i = 0; i < n; i++) stars.push({ x: Math.random() * sc.width, y: Math.random() * sc.height, r: Math.random() * 1.4 + .3, p: Math.random() * 6.28, red: Math.random() < .25 });
+  }
+  function drawStars(t) {
+    sx.clearRect(0, 0, sc.width, sc.height);
+    stars.forEach(function (st) {
+      var a = .3 + .35 * Math.sin(st.p + t / 900);
+      sx.fillStyle = st.red ? "rgba(240,64,90," + a + ")" : "rgba(221,225,232," + a + ")";
+      sx.beginPath(); sx.arc(st.x, st.y, st.r, 0, 6.283); sx.fill();
+    });
+    requestAnimationFrame(drawStars);
+  }
+  sizeStars(); window.addEventListener("resize", sizeStars); requestAnimationFrame(drawStars);
+
+  /* cadeado */
+  var lock = document.getElementById("lock"), app = document.getElementById("app");
+  var input = document.getElementById("lock-input"), hint = document.getElementById("hint");
+  var tries = 0, unlocked = false;
+  var hints = [
+    "Ainda não. Pensa no dia da nossa primeira mensagem.",
+    "Foi numa sexta-feira de agosto...",
+    "Começa com 07..."
+  ];
+  var real = "";
+  input.addEventListener("input", function () {
+    var v = input.value;
+    var stars = (v.match(/\*/g) || []).length;
+    var added = v.replace(/\*/g, "").replace(/[^\d\/.\-]/g, "");
+    real = (real.slice(0, stars) + added).slice(0, 10);
+    input.value = new Array(real.length + 1).join("*");
+  });
+  document.getElementById("lock-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    if (unlocked) return;
+    if (PASS.indexOf(real.replace(/\D/g, "")) !== -1) {
+      unlocked = true;
+      hint.textContent = "Isso. Pode entrar.";
+      lock.classList.add("open");
+      burst(window.innerWidth / 2, window.innerHeight * .45, 90);
+      setTimeout(function () {
+        lock.classList.add("gone");
+        app.classList.add("live");
+        app.removeAttribute("aria-hidden");
+        go(0);
+      }, 900);
+      setTimeout(function () { lock.hidden = true; }, 1800);
+    } else {
+      hint.textContent = hints[Math.min(tries, hints.length - 1)];
+      tries += 1;
+      var card = lock.querySelector(".lock-card");
+      card.classList.remove("shake"); void card.offsetWidth; card.classList.add("shake");
+      input.select();
+    }
+  });
+  setTimeout(function () { try { input.focus({ preventScroll: true }); } catch (e) {} }, 300);
+
+  /* stories */
+  var slides = Array.prototype.slice.call(document.querySelectorAll(".slide"));
+  var bars = document.getElementById("bars");
+  for (var b = 0; b <= STORY_LAST; b++) bars.appendChild(document.createElement("i"));
+  var barEls = bars.querySelectorAll("i");
+  var back = document.getElementById("back"), next = document.getElementById("next");
+  var cur = -1;
+
+  function go(i) {
+    if (i < 0 || i >= slides.length) return;
+    slides.forEach(function (s, k) {
+      s.classList.toggle("active", k === i);
+      s.classList.toggle("past", k < i);
+      s.setAttribute("aria-hidden", k === i ? "false" : "true");
+    });
+    for (var k = 0; k < barEls.length; k++) barEls[k].classList.toggle("done", k <= i);
+    cur = i;
+    slides[i].scrollTop = 0;
+    back.disabled = i === 0;
+    app.classList.toggle("quiet", i > STORY_LAST);
+    next.textContent = i === STORY_LAST ? "Tenho uma pergunta" : "Próximo";
+    if (i === 8) setTimeout(count, 500);
+    if (i === 10) startTurn();
+  }
+  next.addEventListener("click", function () { go(cur + 1); });
+  back.addEventListener("click", function () { go(cur - 1); });
+  document.addEventListener("keydown", function (e) {
+    if (!unlocked || cur > STORY_LAST) return;
+    if (e.key === "ArrowRight" || e.key === "PageDown") go(cur + 1);
+    if (e.key === "ArrowLeft" || e.key === "PageUp") go(cur - 1);
+  });
+  var tx = null, ty = null;
+  document.getElementById("stage").addEventListener("touchstart", function (e) { tx = e.touches[0].clientX; ty = e.touches[0].clientY; }, { passive: true });
+  document.getElementById("stage").addEventListener("touchend", function (e) {
+    if (tx === null || cur > STORY_LAST) return;
+    var dx = e.changedTouches[0].clientX - tx, dy = e.changedTouches[0].clientY - ty;
+    if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy) * 1.5) go(cur + (dx < 0 ? 1 : -1));
+    tx = null;
+  });
+
+  /* a conta das letras */
+  var words = ["Smacks", "Smacks", "Kisses", "Kisses"];
+  var wrap = document.getElementById("words"), counter = document.getElementById("counter");
+  var tiles = [], n = 0;
+  words.forEach(function (w) {
+    var box = document.createElement("div"); box.className = "word";
+    var name = document.createElement("span"); name.className = "name"; name.textContent = w;
+    var row = document.createElement("div"); row.className = "tiles";
+    w.split("").forEach(function (ch) {
+      n += 1;
+      var t = document.createElement("div"); t.className = "tile on";
+      var bb = document.createElement("b"); bb.textContent = ch;
+      var ii = document.createElement("i"); ii.textContent = String(n);
+      t.appendChild(bb); t.appendChild(ii); row.appendChild(t); tiles.push(t);
+    });
+    box.appendChild(name); box.appendChild(row); wrap.appendChild(box);
+  });
+  var timer = null;
+  function count() {
+    if (timer) clearInterval(timer);
+    tiles.forEach(function (t) { t.classList.remove("on", "now"); });
+    counter.textContent = "0";
+    var k = 0;
+    timer = setInterval(function () {
+      if (k > 0) tiles[k - 1].classList.remove("now");
+      if (k >= tiles.length) { clearInterval(timer); timer = null; counter.textContent = "24"; return; }
+      tiles[k].classList.add("on", "now");
+      k += 1; counter.textContent = String(k);
+    }, 120);
+  }
+  document.getElementById("again").addEventListener("click", count);
+
+  /* pixel art: Rafa e Sammi */
+  var PAL = { K: "#140a0d", H: "#2e1f18", h: "#4d3628", S: "#ecbf9f", s: "#d29d7e", z: "#b98f78", E: "#2a1a14", M: "#5a3d2e", m: "#b97a68",
+    W: "#f3f0ea", O: "#1d1b21", P: "#26242b", B: "#101013", N: "#2d1a14", n: "#4d2f22",
+    G: "#1a1416", q: "#f6e0cf", R: "#b0182e", T: "#1d1b21", g: "#8d9097", l: "#d9d9de", r: "#d2423f", b: "#4a3226",
+    J: "#2c3e66", j: "#22325a", v: "#6f7f2f", C: "#e3323f", c: "#a91e2c", Y: "#e7c24b", V: "#dde1e8", X: "#ffffff" };
+  function norm(rows) { return rows.map(function (r) { while (r.length < 16) r += "."; return r.slice(0, 16); }); }
+  var RAFA = norm([
+    "....KKKKKKKK....",
+    "...KHHHHHHHHK...",
+    "..KHHhHHHHHHHK..",
+    "..KHHHHHHHHHHHK.",
+    "..KHHHHHHHSSHK..",
+    "..KHSSSSSSSSHK..",
+    "..KHSESSSSESHK..",
+    "..KHSSSSSSSSHK..",
+    "..KHSSSSsSSSHK..",
+    "..KHSSMMMMSSHK..",
+    "..KHSSSmmSSSHK..",
+    "...KHzSSSSzHK...",
+    "....KKSSSSKK....",
+    "..KOOOOOOOOOOK..",
+    ".KOOOOWYWOOOOOK.",
+    ".KOOOOWWWWWOOOK.",
+    ".KOOOOWKWKWOOOK.",
+    ".KOOOORRROOOOOK.",
+    ".KSKOOOOOOOOKSK.",
+    ".KSKOOOOOOOOKSK.",
+    "..KKOOOOOOOOKK..",
+    "...KPPPPPPPPK...",
+    "...KPPPPPPPPK...",
+    "...KPPPKKPPPK...",
+    "...KPPPKKPPPK...",
+    "...KPPPKKPPPK...",
+    "...KBBBKKBBBK...",
+    "..KBBBBKKBBBBK.."
+  ]);
+  var SAMMI = norm([
+    "....KKKKKKKK....",
+    "...KNNNNNNNNK...",
+    "..KNNnNNNNNNNK..",
+    "..KNNNNNNNNNNK..",
+    ".KNNNSSSSSSNNNK.",
+    ".KNNSSSSSSSSNNK.",
+    ".KNNSSSSSSSSNNK.",
+    ".KNNSESSSSESNNK.",
+    ".KNNSSSsSSSSNNK.",
+    ".KNNSSSSSSSSNNK.",
+    ".KNNSSSmmSSSNNK.",
+    ".KNNKSSSSSSKNNK.",
+    ".KNNNKTTTTKNNNK.",
+    "..KglTTTTTTlgK..",
+    ".KTglTWYWTTlgTK.",
+    ".KTlgTWWWWTglTK.",
+    ".KTgrTWKWKTrgTK.",
+    ".KTlgTTTTTTglTK.",
+    ".KSglTTTTTTlgSK.",
+    ".KvgbbVbbbbbgvK.",
+    "..KlJJJJJJJJlK..",
+    "..KgJJJJJJJJgK..",
+    "..KlJJjJJjJJlK..",
+    "..KJJJJJJJJJJK..",
+    "..KJJJJJJJJJJK..",
+    "..KJJJjJJjJJJK..",
+    "...KKKKKKKKKK...",
+    "...KBBBKKBBBK..."
+  ]);
+  var RAFA_KNEEL = norm(["", "", "", "", ""].concat(RAFA.slice(0, 20)).concat([
+    "...KPPPPPPPPK...",
+    "..KBBPPPPPPPPK..",
+    ".KBBBKKKKKKBBK.."
+  ]));
+  var HEART = [".R.R.", "RRRRR", ".RRR.", "..R.."];
+  function sprite(ctx, rows, x, y, blink) {
+    for (var r = 0; r < rows.length; r++) {
+      for (var c = 0; c < rows[r].length; c++) {
+        var ch = rows[r][c];
+        if (ch === ".") continue;
+        if (blink && ch === "E") ch = "s";
+        ctx.fillStyle = PAL[ch];
+        ctx.fillRect(x + c, y + r, 1, 1);
+      }
+    }
+  }
+  function px(id) { var c = document.getElementById(id); var x = c.getContext("2d"); x.imageSmoothingEnabled = false; return x; }
+  var pxHero = px("pix-hero"), pxTurn = px("pix-turn"), pxDone = px("pix-done");
+  var pix = { kneel: false, kneelAt: 0, floats: { turn: [], done: [] }, last: {} };
+  function rise(list, now, every, x0, spread, key) {
+    if (!pix.last[key] || now - pix.last[key] > every) {
+      pix.last[key] = now;
+      list.push({ x: x0 + Math.round((Math.random() - .5) * spread), y: 22, born: now });
+    }
+    for (var i = list.length - 1; i >= 0; i--) {
+      var f = list[i], age = (now - f.born) / 1000;
+      f.cy = Math.round(f.y - age * 7);
+      if (f.cy < -4) list.splice(i, 1);
+    }
+  }
+  function drawFloats(ctx, list, now) {
+    list.forEach(function (f) {
+      var wob = Math.round(Math.sin((now - f.born) / 300) * 1);
+      sprite(ctx, HEART, f.x + wob, f.cy, false);
+    });
+  }
+  /* o Uno subindo o morro */
+  var pxUno = px("pix-uno");
+  var unoImg = new Image(), unoReady = false;
+  unoImg.onload = function () { unoReady = true; };
+  unoImg.src = "data:image/png;base64,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";
+  var HOUSE = [
+    "....KKK....",
+    "...KRRRK...",
+    "..KRRRRRK..",
+    ".KRRRRRRRK.",
+    "KKKKKKKKKKK",
+    ".KWWWKWWWK.",
+    ".KWLWKWBWK.",
+    ".KWWWKWBWK.",
+    ".KKKKKKKKK."
+  ];
+  var HPAL = { K: "#07080c", R: "#a3122a", W: "#e8e2da", L: "#f7e9a0", B: "#5a3d2e" };
+  var unoStars = [];
+  for (var si = 0; si < 34; si++) unoStars.push([(si * 53) % 190 + 1, (si * 29) % 52 + 2]);
+  function groundY(x) { return x < 144 ? 107 - Math.floor(Math.max(x, -120) / 3) : 59; }
+  function block(c, rows, pal, x0, y0, sc) {
+    for (var r = 0; r < rows.length; r++) for (var q = 0; q < rows[r].length; q++) {
+      var ch = rows[r][q]; if (ch === ".") continue;
+      c.fillStyle = pal[ch]; c.fillRect(x0 + q * sc, y0 + r * sc, sc, sc);
+    }
+  }
+  function drawUno(now) {
+    var c = pxUno;
+    c.fillStyle = "#160a12"; c.fillRect(0, 0, 192, 108);
+    unoStars.forEach(function (st, i) { if ((Math.floor(now / 400) + i) % 5) { c.fillStyle = i % 3 ? "#dde1e8" : "#f0405a"; c.fillRect(st[0], st[1], 1, 1); } });
+    c.fillStyle = "#e8e2da"; c.fillRect(168, 8, 8, 8); c.fillStyle = "#160a12"; c.fillRect(172, 7, 5, 7);
+    for (var x = 0; x < 192; x++) {
+      var gy = groundY(x);
+      c.fillStyle = "#1f3a26"; c.fillRect(x, gy, 1, 108 - gy);
+      c.fillStyle = "#3f6b3e"; c.fillRect(x, gy, 1, 2);
+      if ((x * 7) % 11 === 0) { c.fillStyle = "#2b4d31"; c.fillRect(x, gy + 5 + (x % 9), 2, 1); }
+    }
+    block(c, HOUSE, HPAL, 158, 59 - HOUSE.length * 2, 2);
+    var cycle = 10000, t = now % cycle;
+    var drive = Math.min(t, 7000) / 7000;
+    var cx = -84 + Math.round(drive * 156 / 3) * 3;
+    var bump = drive < 1 && Math.floor(now / 140) % 2 ? 1 : 0;
+    var base = groundY(cx);
+    if (unoReady) {
+      for (var col = 0; col < unoImg.width; col++) {
+        var gx = cx + col; if (gx < 0 || gx > 191) continue;
+        c.drawImage(unoImg, col, 0, 1, unoImg.height, gx, base - Math.floor(col / 3) - unoImg.height + 1 - bump, 1, unoImg.height);
+      }
+    }
+    if (drive < 1) {
+      for (var p = 0; p < 5; p++) {
+        var age = ((now / 900) + p * .2) % 1;
+        var ex = cx + 2 - Math.round(age * 14), ey = base - 6 - Math.round(age * 8);
+        if (ex >= 0) { c.fillStyle = "rgba(200,200,210," + ((1 - age) * .6).toFixed(2) + ")"; var sz = 1 + Math.round(age * 2); c.fillRect(ex, ey, sz, sz); }
+      }
+    } else {
+      var hb = Math.floor((t - 7000) / 200);
+      block(c, HEART, PAL, 164, 26 - Math.min(hb, 6), 2);
+    }
+  }
+  function specs(ctx, x, y) {
+    ctx.save(); ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "#0b0a0b";
+    var X = x * 2, Y = y * 2;
+    [[7, 13], [18, 13]].forEach(function (L) {
+      var lx = X + L[0], ly = Y + L[1];
+      ctx.fillRect(lx, ly, 7, 1); ctx.fillRect(lx, ly + 4, 7, 1);
+      ctx.fillRect(lx, ly, 1, 5); ctx.fillRect(lx + 6, ly, 1, 5);
+    });
+    ctx.fillRect(X + 14, Y + 14, 4, 1);
+    ctx.fillRect(X + 6, Y + 12, 1, 1); ctx.fillRect(X + 25, Y + 12, 1, 1);
+    ctx.restore();
+  }
+  function drawSammi(ctx, x, y, blink) { sprite(ctx, SAMMI, x, y, blink); specs(ctx, x, y); }
+  [pxHero, pxTurn, pxDone].forEach(function (c) { c.setTransform(2, 0, 0, 2, 0, 0); c.imageSmoothingEnabled = false; });
+  function pixLoop(now) {
+    var bob = Math.floor(now / 520) % 2;
+    var blinkR = (now % 3300) < 150, blinkS = ((now + 1100) % 3900) < 150;
+    if (cur === 0) {
+      pxHero.clearRect(0, 0, 48, 36);
+      sprite(pxHero, RAFA, 6, 7 + bob, blinkR);
+      drawSammi(pxHero, 26, 7 + (1 - bob), blinkS);
+      sprite(pxHero, HEART, 21, 1 + Math.round(Math.sin(now / 420)), false);
+    }
+    if (cur === 5) drawUno(now);
+    if (cur === 10) {
+      pxTurn.clearRect(0, 0, 48, 36);
+      drawSammi(pxTurn, 28, 7 + (pix.kneel ? 0 : bob), blinkS && !pix.kneel);
+      if (pix.kneel) {
+        sprite(pxTurn, RAFA, 6, 7 + (1 - bob), blinkR);
+        var rx = 19, ry = 25 + (1 - bob);
+        pxTurn.fillStyle = PAL.c; pxTurn.fillRect(rx, ry, 4, 2);
+        pxTurn.fillStyle = PAL.V; pxTurn.fillRect(rx + 1, ry - 2, 2, 1); pxTurn.fillRect(rx, ry - 1, 1, 1); pxTurn.fillRect(rx + 3, ry - 1, 1, 1);
+        if (Math.floor(now / 250) % 2) { pxTurn.fillStyle = PAL.X; pxTurn.fillRect(rx + 3, ry - 4, 1, 1); pxTurn.fillRect(rx + 2, ry - 3, 1, 1); pxTurn.fillRect(rx + 4, ry - 3, 1, 1); }
+        rise(pix.floats.turn, now, 700, 23, 10, "turn");
+        drawFloats(pxTurn, pix.floats.turn, now);
+      } else {
+        sprite(pxTurn, RAFA, 6, 7 + (1 - bob), blinkR);
+      }
+    }
+    if (!document.getElementById("ask-done").hidden) {
+      pxDone.clearRect(0, 0, 48, 36);
+      sprite(pxDone, RAFA, 9, 7 + bob, blinkR);
+      drawSammi(pxDone, 22, 7 + bob, blinkS);
+      rise(pix.floats.done, now, 380, 23, 30, "done");
+      drawFloats(pxDone, pix.floats.done, now);
+    }
+    requestAnimationFrame(pixLoop);
+  }
+  requestAnimationFrame(pixLoop);
+
+  /* a virada */
+  var typed = document.getElementById("typed"), look = document.getElementById("look"), cont = document.getElementById("cont");
+  var turnTimers = [];
+  function startTurn() {
+    turnTimers.forEach(clearTimeout); turnTimers = [];
+    var text = "Quer namorar comigo?";
+    typed.innerHTML = '<span class="t"></span><span class="caret"></span>';
+    typed.classList.remove("on");
+    var t = typed.querySelector(".t");
+    look.classList.remove("show"); cont.classList.remove("show");
+    pix.kneel = false; pix.floats.turn = [];
+    turnTimers.push(setTimeout(function () { look.classList.add("show"); }, 700));
+    turnTimers.push(setTimeout(function () { pix.kneel = true; }, 2200));
+    var delay = 5200;
+    turnTimers.push(setTimeout(function () { typed.classList.add("on"); }, delay - 200));
+    text.split("").forEach(function (ch, idx) {
+      delay += ch === "," || ch === "?" ? 420 : 110;
+      turnTimers.push(setTimeout(function () { t.textContent = text.slice(0, idx + 1); }, delay));
+    });
+    turnTimers.push(setTimeout(function () { cont.classList.add("show"); }, delay + 6000));
+  }
+  cont.addEventListener("click", function () { go(11); });
+
+  /* confete */
+  var cc = document.getElementById("confetti"), cx = cc.getContext("2d"), parts = [], craf = null;
+  function sizeConf() { cc.width = window.innerWidth; cc.height = window.innerHeight; }
+  sizeConf(); window.addEventListener("resize", sizeConf);
+  function burst(fromX, fromY, amount) {
+    var colors = ["#f0405a", "#a3122a", "#dde1e8", "#fbf1f3", "#9aa1ad"];
+    for (var i = 0; i < (amount || 180); i++) {
+      parts.push({ x: fromX, y: fromY, vx: (Math.random() - .5) * 18, vy: -Math.random() * 17 - 4,
+        w: 5 + Math.random() * 6, h: 8 + Math.random() * 8, r: Math.random() * 3, vr: (Math.random() - .5) * .3,
+        c: colors[i % colors.length], life: 0 });
+    }
+    if (!craf) craf = requestAnimationFrame(confTick);
+  }
+  function confTick() {
+    cx.clearRect(0, 0, cc.width, cc.height);
+    parts.forEach(function (p) {
+      p.life += 1; p.vy += .3; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c; cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h); cx.restore();
+    });
+    parts = parts.filter(function (p) { return p.y < cc.height + 30 && p.life < 280; });
+    if (parts.length) craf = requestAnimationFrame(confTick); else { craf = null; cx.clearRect(0, 0, cc.width, cc.height); }
+  }
+
+  /* coração de partículas */
+  var hc = document.getElementById("heart"), hx = hc.getContext("2d"), dots = [], hStart = 0;
+  function heartPoint(t) {
+    return { x: 16 * Math.pow(Math.sin(t), 3), y: -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t)) };
+  }
+  function setupHeart() {
+    var dpr = window.devicePixelRatio || 1;
+    var w = hc.clientWidth || 360, h = hc.clientHeight || 300;
+    hc.width = w * dpr; hc.height = h * dpr; hx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    var scale = Math.min(w, h) / 38; dots = [];
+    for (var i = 0; i < 520; i++) {
+      var t = Math.random() * Math.PI * 2, k = i < 300 ? 1 : Math.sqrt(Math.random()) * .95, p = heartPoint(t);
+      dots.push({ tx: w / 2 + p.x * scale * k, ty: h / 2 + p.y * scale * k + 8, x: Math.random() * w, y: h + Math.random() * 200,
+        r: Math.random() * 2 + .8, c: Math.random() < .7 ? "240,64,90" : "221,225,232", delay: Math.random() * 900 });
+    }
+    hc._w = w; hc._h = h;
+  }
+  function drawHeart(now) {
+    var w = hc._w, h = hc._h, el = now - hStart;
+    hx.clearRect(0, 0, w, h);
+    var beat = 1 + .045 * Math.max(0, Math.sin(el / 260)) * (el > 2200 ? 1 : 0);
+    dots.forEach(function (d) {
+      var prog = Math.min(1, Math.max(0, (el - d.delay) / 1600)), e = 1 - Math.pow(1 - prog, 3);
+      var tx2 = w / 2 + (d.tx - w / 2) * beat, ty2 = h / 2 + (d.ty - h / 2) * beat;
+      hx.fillStyle = "rgba(" + d.c + "," + (.35 + .65 * e) + ")";
+      hx.shadowColor = "rgba(240,64,90,.8)"; hx.shadowBlur = 8 * e;
+      hx.beginPath(); hx.arc(d.x + (tx2 - d.x) * e, d.y + (ty2 - d.y) * e, d.r, 0, 6.283); hx.fill();
+    });
+    requestAnimationFrame(drawHeart);
+  }
+
+  var form = document.getElementById("ask-form"), done = document.getElementById("ask-done");
+  Array.prototype.forEach.call(document.querySelectorAll(".choice"), function (btn) {
+    btn.addEventListener("click", function () {
+      var r = btn.getBoundingClientRect();
+      form.hidden = true; done.hidden = false;
+      slides[11].scrollTop = 0;
+      setupHeart(); hStart = performance.now(); requestAnimationFrame(drawHeart);
+      burst(r.left + r.width / 2, Math.min(window.innerHeight * .8, r.top + r.height / 2));
+      setTimeout(function () { burst(window.innerWidth * .2, window.innerHeight * .9); burst(window.innerWidth * .8, window.innerHeight * .9); }, 2400);
+    });
+  });
+})();
+</script>
+</body>
+</html>
